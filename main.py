@@ -31,12 +31,11 @@ def get_db():
         g.db.row_factory = sqlite3.Row
     return g.db
 
-def close_db(e=None):
+def close_db():
     db = g.pop('db', None)
-
     if db is not None:
         db.close()
-
+app.teardown_appcontext(close_db)
 
 # @app.before_request
 # def load_logged_in_user():
@@ -54,13 +53,16 @@ def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         user_id = int(request.form['ID'])
+        psw = request.form['password']
         user = get_db().execute(
             'SELECT * FROM user WHERE AccountID = ?', (user_id,)
         ).fetchone()
         if user is None:
-            return "false"
-        return view(**kwargs)
-
+            return "without this user"
+        elif psw != user['password']:
+            return "wrong password"
+        else:
+            return view(**kwargs)
     return wrapped_view
 # @app.route('/test/')
 # def test():
@@ -77,8 +79,8 @@ def main():
         y = float(request.form['y'])
         # x=32.05
         # y=118.75
-        dx = 2/111.7
-        dy = 2/(111.7 * cos(radians(x)))
+        dx = 2.2/111.1
+        dy = 2.2/(111.1 * cos(radians(x)))
         # print(dx, dy, cos(radians(x)))
         db = get_db()
         temp = db.execute(
@@ -94,13 +96,15 @@ def main():
             if distance < 2:
                 lst.append({"x":i["x"], "y":i["y"], "information": i["information"], "distance": int(distance*1000)})
         lst.sort(key=lambda t : t["distance"])
+        lst = lst[0:20]
+
+        return jsonify(lst)
+    return send_file('static/test.json',mimetype='application/json')
+
         # print(lst[0:10])
     # return Response('test.json',mimetype='application/json')
     # print(url_for('static', filename='test.json',))
     # return url_for('static', filename='test.json',)
-
-        return jsonify(lst)
-    return send_file('static/test.json',mimetype='application/json')
 
 @app.route('/search/<keyword>', methods=['GET', 'POST'])
 @login_required
@@ -108,8 +112,8 @@ def search(keyword):
     if request.method == 'POST':
         x = float(request.form['x'])
         y = float(request.form['y'])
-        dx = 2/111.7
-        dy = 2/(111.7 * cos(radians(x)))
+        dx = 2.2/111.1
+        dy = 2.2/(111.1 * cos(radians(x)))
         # print(dx, dy, cos(radians(x)))
         db = get_db()
         temp = db.execute(
@@ -119,28 +123,23 @@ def search(keyword):
         def cal_distance(_x, _y):
             return get_distance_hav(x, y, _x, _y)
 
-
         for i in temp:
             distance = cal_distance(i["x"], i["y"])
             if distance < 2:
                 lst.append({"x":i["x"], "y":i["y"], "information": i["information"], "distance": int(distance*1000)})
         lst.sort(key=lambda t : t["distance"])
-        # print(lst[0:10])
-    # return Response('test.json',mimetype='application/json')
-    # print(url_for('static', filename='test.json',))
-    # return url_for('static', filename='test.json',)
 
         return jsonify(lst)
     return keyword
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-
+    error = None
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         db = get_db()
-        error = None
+
         user = db.execute(
             'SELECT * FROM user WHERE account = ?', (username,)
         ).fetchone()
@@ -151,9 +150,9 @@ def login():
             error = 'Incorrect password.'
 
         if error is None:
-
             return jsonify({'isSuccess':True, 'ID':user["AccountID"]})
-
+        else:
+            return jsonify({'isSuccess': False, 'errorInformation': error})
 
     return jsonify({'isSuccess':False})
 
