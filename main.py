@@ -31,7 +31,7 @@ def get_db():
         g.db.row_factory = sqlite3.Row
     return g.db
 
-def close_db():
+def close_db(e=None):
     db = g.pop('db', None)
     if db is not None:
         db.close()
@@ -72,11 +72,13 @@ def login_required(view):
 #     # return send_file('test.json')
 
 @app.route('/', methods=['GET', 'POST'])
+@login_required
 def main():
     if request.method == 'POST':
-    # if True:
         x = float(request.form['x'])
         y = float(request.form['y'])
+        # print(x)
+        # print(y)
         # x=32.05
         # y=118.75
         dx = 2.2/111.1
@@ -200,7 +202,6 @@ def submitinfo():
     if request.method == 'POST':
 
         ID = request.form['ID']
-        # password = request.form['password']
         info = request.form['info']
         x = float(request.form['x'])
         y = float(request.form['y'])
@@ -209,16 +210,6 @@ def submitinfo():
 
         if not info:
             error = 'info is required'
-
-        # if not account:
-        #     error = 'Account is required.'
-        # elif not password:
-        #     error = 'Password is required.'
-        # elif db.execute(
-        #         'SELECT AccountID FROM user WHERE Account = ?', (account,)
-        # ).fetchone() is not None:
-        #     error = 'User {} is already registered.'.format(account)
-
         if error is None:
             db.execute(
                 'INSERT INTO Point (author_id, X, Y, Information) VALUES (?, ?, ?, ?)',
@@ -229,6 +220,48 @@ def submitinfo():
         return jsonify({'isSuccess': False, 'errorInformation': error})
 
     return jsonify({'isSuccess':False, 'errorInformation':"不接受get"})
+
+@app.route('/allpoints', methods=['GET', 'POST'])
+@login_required
+def allpoints():
+
+    if request.method == 'POST':
+        ID = request.form['ID']
+        # ID = 1
+        db = get_db()
+        temp = db.execute(
+            'SELECT * FROM POINT WHERE author_id = ?', ID).fetchall()
+        lst = []
+        for i in temp:
+            lst.append({"pointID":i["id"],"x": i["x"], "y": i["y"], "information": i["information"]})
+        return jsonify(lst)
+
+
+@app.route('/delete', methods=['GET', 'POST'])
+@login_required
+def delete():
+    if request.method == 'POST':
+        PointID = request.form['PointID']
+        Author_ID = request.form['ID']
+        db = get_db()
+        temp = db.execute(
+            'SELECT * FROM POINT WHERE id = ?', PointID).fetchone()
+        if temp['author_id'] == int(Author_ID):
+            db.execute('DELETE FROM POINT WHERE id = ?', Author_ID)
+            db.commit()
+            return "001"
+        return "000"
+
+
+
+# if not account:
+#     error = 'Account is required.'
+# elif not password:
+#     error = 'Password is required.'
+# elif db.execute(
+#         'SELECT AccountID FROM user WHERE Account = ?', (account,)
+# ).fetchone() is not None:
+#     error = 'User {} is already registered.'.format(account)
 
 app.run(host='0.0.0.0', port=8080)
 
