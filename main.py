@@ -230,7 +230,7 @@ def allpoints():
         # ID = 1
         db = get_db()
         temp = db.execute(
-            'SELECT * FROM POINT WHERE author_id = ?', ID).fetchall()
+            'SELECT * FROM POINT WHERE author_id = ?', (ID,)).fetchall()
         lst = []
         for i in temp:
             lst.append({"pointID":i["id"],"x": i["x"], "y": i["y"], "information": i["information"]})
@@ -244,10 +244,14 @@ def delete():
         PointID = request.form['PointID']
         Author_ID = request.form['ID']
         db = get_db()
+        # print(PointID)
         temp = db.execute(
-            'SELECT * FROM POINT WHERE id = ?', PointID).fetchone()
+            'SELECT * FROM POINT WHERE id = ?', (PointID,)).fetchone()
+        # print(temp['author_id'])
+        # print(type(temp['author_id']))
+        # print(int(Author_ID))
         if temp['author_id'] == int(Author_ID):
-            db.execute('DELETE FROM POINT WHERE id = ?', Author_ID)
+            db.execute('DELETE FROM POINT WHERE id = ?', (PointID,))
             db.commit()
             return "001"
         return "000"
